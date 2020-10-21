@@ -30,8 +30,7 @@ batch_size=512
 # Image size after super resolution
 size = 256 
 
-# GPU No. (same as the input for "CUDA_VISIONABLE_DEVICE")
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")    
+# GPU No. (same as the input for CUDA_VISIBLE_DEVICES)
 gpu_no = '0,1'  # if you want to use 2 GPUs
 
 # Pre-trained CARN V2 model location
@@ -41,7 +40,8 @@ model_path = './model_check_points/CRAN_V2/CARN_model_checkpoint.pt'
 dst = './dst/' 
 src = './src/' 
 
-# set-up
+# inference set-up
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")    
 gpu_tot = gpusetting(gpu_no) 
 img_list = imglist(src, dst)
 model = ModelBuild(model_path, device)
