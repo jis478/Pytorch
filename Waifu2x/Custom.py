@@ -188,7 +188,7 @@ def imglist(src, dst):
     if os.path.exists(dst):
         shutil.rmtree(dst)
     os.makedirs(dst)
-    img_list = glob.glob(src + '*/*/*.jpg') 
+    img_list = glob.glob(src + '*') 
     return img_list
     
     
@@ -268,3 +268,7 @@ class CARN_V2_multiGPU(CARN):
             out = torch.squeeze(F.interpolate(out, size=(splitter.size,splitter.size)).mul_(255).add_(0.5).clamp_(0, 255),0)
             out = Image.fromarray(out.permute(1,2,0).to('cpu', torch.uint8).numpy())
             out.save(splitter.filename)
+
+            
+            
+            
