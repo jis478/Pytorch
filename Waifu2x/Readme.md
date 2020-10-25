@@ -1,9 +1,8 @@
 # Waifu2x multi-GPU (or single-GPU) inference 
 
 ## Overview 
-- A multi-GPU (or single-GPU) inference added to [Waifu2x re-implementation](https://github.com/yu45020/Waifu2x/blob/master/Models.py) 
+- Multi-GPU (or single-GPU) inference added to [Waifu2x re-implementation](https://github.com/yu45020/Waifu2x/blob/master/Models.py) 
 - Curretnly only CARN-V2 is supported for multi-GPU inference.
-- A single GPU inference is also supported if the number of GPUs sets to 1.
 - All the code changes are contained in Custom.py and the original codes haven't been modified. 
 
 ## Inference example
@@ -25,7 +24,7 @@ from Custom import *   # all of the modifications are contained here
 
 
 # batch size
-batch_size=512 
+batch_size=256 
 
 # Image size after super resolution
 size = 256 
@@ -42,16 +41,16 @@ src = './src/'
 
 # inference set-up
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")    
-gpu_tot = gpusetting(gpu_no) 
+device_ids = gpusetting(gpu_no) 
 img_list = imglist(src, dst)
-model = ModelBuild(model_path, device)
-dataset = CustomDataset(img_list=img_list, gpu_tot=gpu_tot, dst=dst, size=size)
+model = ModelBuild(model_path, device_ids)
+dataset = CustomDataset(img_list=img_list, device_ids=device_ids, dst=dst, size=size)
 dataloader = DataLoader(dataset, 
                         batch_size=batch_size,
                         shuffle=False,
                         collate_fn=collate_patches)
 
-# CARN-based super resolution
+# inference
 for batch in tqdm.tqdm(dataloader): 
     with torch.no_grad(): 
         model(batch) 
