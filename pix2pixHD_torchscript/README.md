@@ -5,7 +5,7 @@
 This is a TorchScript converting code for [pix2pixHD](https://github.com/NVIDIA/pix2pixHD/). Only "no instance" case is supported.
 
 #### Requirement
-Torch >= 1.5.0 
+Torch >= 1.5.0 <br>
 Python >= 3.x
 
 #### Converting example 
