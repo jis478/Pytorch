@@ -10,13 +10,19 @@ from util import html
 import torch
 import numpy as np
 
+# The original torch model path can be found in /Options/Base_Option.py 
+TORCHSCROPT_MODEL_PATH = './model_torchscript.pt'
+
 if __name__ == '__main__':
     
+    # CAUTION: Only "no instance" case is supported 
+
     opt = TestOptions().parse(save=False)
-    print(opt)
+    opt.no_instance = True
     model = create_model(opt)
     model = model.cuda()
     traced_script_module = torch.jit.script(model)
-    traced_script_module.save('model_torchscript.pt')
+    traced_script_module.save(TORCHSCROPT_MODEL_PATH)
+
     print('TorchScript Conversion Finished!')
     
