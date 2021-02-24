@@ -1,17 +1,4 @@
 
-
-########### 할 것
-# 1. generator의 input 부분 부터 수정해야한다. 왜? 4x4x512가 아니라 32x32x8을 input으로 시작한다.
-# 2. refecltion padding (resblock), no padding (conv), zero padding (generator) 논문 참조 figure18
-#    -> convlayer에서 padding을 여러개 처리할 수 있도록 변경
-# 3. resblock에는 conv2d, generator resblock에는 modulatedconv2d가 쓰이면 될 것 같음. styledconv는?
-#    -> generator 부분 다시 봐야한다.. 아직 잘 모르겟음
-# 4. fIGURE 18 보고 256X256으로 재구축 해볼 것
-# 5. B.2 R1 reg 읽어보고 적용 필요 -> path length까지 적용해야 할듯..이것도 r1 일종 같음
-# 6. linear layer 마지막에 activation 불필요?
-# 7. cooor에 왜 g loss가 들어가는지?
-
-
 from torch.utils.data import DataLoader
 import argparse
 import time
