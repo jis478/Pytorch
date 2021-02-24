@@ -1,1 +1,1 @@
-# Pytorch implementations by Mark Kim 
+# Pytorch implementations
