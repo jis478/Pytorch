@@ -7,6 +7,6 @@ This is a simple implementation for [Swapping-Autoencoder-for-Deep-Image Manipul
 ## Results
 
 ###### @ 70,000 iterations 
-![Representative image](https://github.com/jis478/Pytorch/blob/master/Swapping-Autoencoder-for-Deep-Image%20Manipulation/imgs/SAMPLE.PNG)\
+![Representative image](https://github.com/jis478/Pytorch/blob/master/Swapping-Autoencoder-for-Deep-Image%20Manipulation/imgs/SAMPLE.PNG)
 
-![LSUN-Church pretrained model Link]
+###### [LSUN-Church pretrained model Link]
