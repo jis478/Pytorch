@@ -1,3 +1,15 @@
+########### 할 것
+# 1. generator의 input 부분 부터 수정해야한다. 왜? 4x4x512가 아니라 32x32x8을 input으로 시작한다.
+# 2. refecltion padding (resblock), no padding (conv), zero padding (generator) 논문 참조 figure18
+#    -> convlayer에서 padding을 여러개 처리할 수 있도록 변경
+# 3. resblock에는 conv2d, generator resblock에는 modulatedconv2d가 쓰이면 될 것 같음. styledconv는?
+#    -> generator 부분 다시 봐야한다.. 아직 잘 모르겟음
+# 4. fIGURE 18 보고 256X256으로 재구축 해볼 것
+# 5. B.2 R1 reg 읽어보고 적용 필요 -> path length까지 적용해야 할듯..이것도 r1 일종 같음
+# 6. linear layer 마지막에 activation 불필요?
+# 7. cooor에 왜 g loss가 들어가는지?
+
+import torch
 from torch.utils.data import DataLoader
 import argparse
 import time
@@ -16,8 +28,15 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.0002, help='Learning rate')
     parser.add_argument('--fm_U', type=int, default=3, help='feature matching for disc U')
     parser.add_argument('--fm_AB', type=int, default=3, help='feature matching for disc A,B')
-    #     parser.add_argument('--in_channels', type=int, default=32, help='Encoder in-channels')
-    #     parser.add_argument('--channel_multiplier', type=int, default=1, help='Generator channel multiplier')
+    parser.add_argument('--n_downsample', type=int, default=2, help='n_downsample')
+    parser.add_argument('--dim', type=int, default=64, help='Encoder dim')
+    parser.add_argument('--style_dim', type=int, default=64, help='style_dim')
+    parser.add_argument('--n_upsample', type=int, default=2, help='n_upsample')
+    parser.add_argument('--n_res', type=int, default=4, help='n_res')
+    parser.add_argument('--norm', type=str, default='none', help='norm')
+    parser.add_argument('--activ', type=str, default='relu', help='activ')
+    parser.add_argument('--pad_type', type=str, default='reflect', help='pad_type')
+#     parser.add_argument('--channel_multiplier', type=int, default=1, help='Generator channel multiplier')
     #     parser.add_argument('--texture', type=int, default=2048, help='Generator texture channels')
     #     parser.add_argument('--crop_num', type=int, default=8, help='Patches for each image')
     #     parser.add_argument('--ref_num', type=int, default=4, help='Reference patches')
@@ -31,16 +50,16 @@ def parse_args():
     #     parser.add_argument('--lazy_r1', type=bool, default=True, help='Lazy R1 regularization')
     # parser.add_argument('--model_dir', type=str, default='model', help='model directory')
     # parser.add_argument('--model_name', type=str, default='female', help='model name.pt')
-    parser.add_argument('--print', type=int, default=100, help='loss print interval')
-    parser.add_argument('--model_save', type=int, default=5000, help='model save interval')
-    parser.add_argument('--image_save', type=int, default=100, help='intermediate image save interval')
-    parser.add_argument('--image_path', type=str, default='/home/sa/experiments/enc/images',
+    parser.add_argument('--print', type=int, default=1, help='loss print interval')
+    parser.add_argument('--model_save', type=int, default=1, help='model save interval')
+    parser.add_argument('--image_save', type=int, default=1, help='intermediate image save interval')
+    parser.add_argument('--image_path', type=str, default='/home/AniGAN/exp/images/',
                         help='intermediate image result')
     parser.add_argument('--dataset_path', type=str, default='/home/sa/dataset_n/', help='dataset directory')
-    parser.add_argument('--output_path', type=str, default='/home/sa/experiments/enc/checkpoints/',
+    parser.add_argument('--output_path', type=str, default='/home/AniGAN/exp/checkpoints/',
                         help='output directory')
     parser.add_argument('--resume', type=bool, default=False, help='resume')
-    parser.add_argument('--log_name', type=str, default='/home/sa/experiments/enc/log.txt', help='log file name')
+    parser.add_argument('--log_name', type=str, default='/home/AniGAN/exp/log.txt', help='log file name')
     parser.add_argument('--num_workers', type=int, default=8, help='workers for dataloader')
     return parser.parse_args()
 
@@ -52,11 +71,8 @@ def Adv_D_loss(real_logit, fake_logit):
 
 def Adv_G_loss(fake_logit):
     loss = torch.mean(F.softplus(-fake_logit))
-    return loss
+    return 
 
-
-# def feature_matching_loss():
-#     return None
 
 def recon_loss(recon, images):
     loss = torch.nn.L1Loss()
@@ -94,12 +110,12 @@ def train():
     )
     test_iter = iter(test_loader)
 
-    style_encoder = StyleEncoder(n_downsample, input_dim, dim, style_dim, norm, activ, pad_type).to(device)
-    content_encoder = ContentEncoder(n_downsample, n_res, input_dim, dim, norm, activ, pad_type).to(device)
-    decoder = Decoder(n_upsample, n_res, dim, output_dim, input_dim=256, num_ASC_layers=4, num_FST_blocks=2, activ='relu', pad_type='zero').to(device)
-    discriminator_A = Discriminator_X(size, norm='in', activation='relu', pad_type='zero').to(device)
-    discriminator_B = Discriminator_Y(size, norm='in', activation='relu', pad_type='zero').to(device)
-    discriminator_U = Discriminator_U(size, in_dim, norm='in', activation='relu', pad_type='zero').to(device)
+    style_encoder = StyleEncoder(args.n_downsample, 3, args.dim, args.style_dim, args.norm, args.activ, args.pad_type).to(device)
+    content_encoder = ContentEncoder(args.n_downsample, args.n_res, 3, args.dim, args.norm, args.activ, args.pad_type).to(device)
+    decoder = Decoder(args.n_upsample, args.dim, output_dim=3, input_dim=256, num_ASC_layers=4, num_FST_blocks=2, activ='relu', pad_type='zero').to(device)
+    discriminator_U = Discriminator_U(args.size, norm='in', activation='relu', pad_type='zero').to(device)
+    discriminator_A = Discriminator_X(args.size, norm='in', activation='relu', pad_type='zero').to(device)
+    discriminator_B = Discriminator_Y(args.size, norm='in', activation='relu', pad_type='zero').to(device)
 
     activation_U = {}
     activation_A = {}
@@ -279,35 +295,16 @@ def train():
         fm_loss.backward()
         g_optim.step()
 
-
-        # _ = discriminator_U(recon_B)
-        # recon_feature_B = activation.deepcopy()
-        #
-        # _ = discriminator_U(images_B)
-        # real_feature_B = activation.deepcopy()
-        #
-        # for _ in range(args.fm_U):
-        #     loss += recon(recon_feature_B[str(i)].mean([2,3]),real_feature_B[str(i)].mean([2,3]))
-
-
-        ################
-
-
-        # loss
-        #         rec_g_loss = recon_loss(A2A, images_A) + recon_loss(B2B, images_B) + recon_loss(A2B2A, images_A) + recon_loss(B2A2B, images_B)
-        rec_g_loss = 10 * recon_loss(A2A, images_A) + 10 * recon_loss(B2B, images_B) + 5 * recon_loss(A2B2A,
-                                                                                                      images_A) + 5 * recon_loss(
-            B2A2B, images_B)
-
-        adv_g_loss = Adv_G_loss(fake_logit_A) + Adv_G_loss(fake_logit_B)
-        #         + Adv_G_loss(recon_logit_A) + Adv_G_loss(recon_logit_B)
-        #         fm_g_loss = None # TBD
-        g_loss = rec_g_loss + adv_g_loss
-        # recon_loss(s_code_A_recon, s_code_A) # s_code_A에 대한 정답이 없으므로.. code에 recon 걸 수는 없다.
-
+        ##### recon loss
+        c_code_A = content_encoder(images_A)  # 1 x 256 x 64 x 64
+        s_code_A = style_encoder(images_A)  # 1 x 128
+        recon_A = decoder(c_code_A, s_code_A)  # 1 x 3 x 256 x 256
+        reon_loss_AA = recon(recon_A, images_A)
         g_optim.zero_grad()
-        g_loss.backward()
+        fm_loss.backward()
         g_optim.step()
+
+
 
         if iteration % args.print == 0:
             time_elapsed = timer(s_time, time.time())
@@ -316,29 +313,17 @@ def train():
             with open(args.log_name, "a") as log_file:
                 log_file.write('%s\n' % s)
 
-        # print('disc', discriminator.parameters())
-        # print('gen', generator.parameters())
-
-        # val = 12.3
-        # print(f'{val:.2f}')
-        # print(f'{val:.5f}')
-        # # Print log
-        # sys.stdout.write(
-        #     f"\r[iteration {iter:d}/{args.iterations:d}] [D adv loss: {d_adv_loss.item():f}, Patch D adv loss: {p_d_adv_loss.item():f}] [G adv loss: {g_adv_loss.item():f}, recon loss: {recon_loss.item():f}, Patch G adv loss: {p_g_adv_loss.item():f}]"
-        # )
 
         if iteration % args.model_save == 0:
             model_save_path = os.path.join(args.output_path, f'model_{str(iteration).zfill(6)}.pt')
             torch.save({
                 'iter': iteration,
-                'generator_A': generator_A.state_dict(),
-                'encoder_A': encoder_A.state_dict(),
+                'style_encoder': style_encoder.state_dict(),
+                'content_encoder': content_encoder.state_dict(),
+                'decoder': decoder.state_dict(),
+                'discriminator_U': discriminator_U.state_dict(),
                 'discriminator_A': discriminator_A.state_dict(),
-                'generator_B': generator_B.state_dict(),
-                'encoder_B': encoder_B.state_dict(),
                 'discriminator_B': discriminator_B.state_dict(),
-                'patch_discriminator_A': patch_discriminator_A.state_dict(),
-                'patch_discriminator_B': patch_discriminator_B.state_dict(),
                 'g_optimizer': g_optim.state_dict(),
                 'd_optimizer': d_optim.state_dict(),
             }, model_save_path
@@ -355,12 +340,12 @@ def train():
             test_images_A = test_images['images_A'].to(device)
             test_images_B = test_images['images_B'].to(device)
 
-            test_s_code_A, test_t_code_A = encoder_A(test_images_A)
-            test_s_code_B, test_t_code_B = encoder_B(test_images_B)
-            test_recon_A = generator_A(test_s_code_A, test_t_code_A)
-            test_recon_B = generator_B(test_s_code_B, test_t_code_B)
-            test_hybrid_A = generator_A(test_s_code_B, test_t_code_A)
-            test_hybrid_B = generator_B(test_s_code_A, test_t_code_B)
+            test_s_code_A, test_t_code_A = style_encoder(test_images_A)
+            test_s_code_B, test_t_code_B = content_encoder(test_images_B)
+            test_recon_A = decoder(test_s_code_A, test_t_code_A)
+            test_recon_B = decoder(test_s_code_B, test_t_code_B)
+            test_hybrid_A = decoder(test_s_code_B, test_t_code_A)
+            test_hybrid_B = decoder(test_s_code_A, test_t_code_B)
             img_save(test_images_A, 'image_A', iteration, args.image_path)
             img_save(test_images_B, 'image_B', iteration, args.image_path)
             img_save(test_recon_A, 'recon_A', iteration, args.image_path)
