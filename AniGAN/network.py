@@ -29,13 +29,13 @@ class Discriminator_Y(nn.Module):
         log_size = int(math.log(size, 2))
         in_dim = dims[size]
         
-        convs = []
+        blocks = []
         for i in range(log_size, 2, -1):
             out_dim = dims[2 ** (i - 1)]
-            convs.append(ResBlock(in_dim, out_dim, norm=norm, activation=activation, pad_type=pad_type, downsample=True))
+            blocks.append(ResBlock(in_dim, out_dim, norm=norm, activation=activation, pad_type=pad_type, downsample=True))
             in_dim = out_dim
 
-        self.convs = nn.Sequential(*convs)
+        self.blocks = nn.Sequential(*blocks)
         
         self.final_conv = Conv2dBlock(out_dim, dims[4], 3, 1)
         self.final_linear = nn.Sequential(
@@ -44,7 +44,7 @@ class Discriminator_Y(nn.Module):
         )
 
     def forward(self, input):
-        out = self.convs(input)
+        out = self.blocks(input)
 #         print('0', out.size())
         out = self.final_conv(out)
 #         print('1',out.size())
@@ -73,14 +73,14 @@ class Discriminator_X(nn.Module):
         log_size = int(math.log(size, 2))
         in_dim = dims[size]
         
-        convs = []
+        blocks = []
         for i in range(log_size, 2, -1):
-            print(i)
+#             print(i)
             out_dim = dims[2 ** (i - 1)]
-            convs.append(ResBlock(in_dim, out_dim, norm=norm, activation=activation, pad_type=pad_type, downsample=True))
+            blocks.append(ResBlock(in_dim, out_dim, norm=norm, activation=activation, pad_type=pad_type, downsample=True))
             in_dim = out_dim
 
-        self.convs = nn.Sequential(*convs)
+        self.blocks = nn.Sequential(*blocks)
         
         self.final_conv = Conv2dBlock(out_dim, dims[4], 3, 1)
         self.final_linear = nn.Sequential(
@@ -89,7 +89,7 @@ class Discriminator_X(nn.Module):
         )
 
     def forward(self, input):
-        out = self.convs(input)
+        out = self.blocks(input)
 #         print('0', out.size())
         out = self.final_conv(out)
 #         print('1',out.size())
@@ -99,7 +99,7 @@ class Discriminator_X(nn.Module):
         return out
 
 class Discriminator_U(nn.Module):
-    def __init__(self, size, in_dim, norm='in', activation='relu', pad_type='zero'):
+    def __init__(self, size, norm='in', activation='relu', pad_type='zero'):
         super().__init__()
         
         dims = {
@@ -114,10 +114,9 @@ class Discriminator_U(nn.Module):
             1024: 16,
         }
 
-        blocks = [Conv2dBlock(in_dim, dims[size], 1, 1)]
-
-        log_size = int(math.log(size, 2))
         in_dim = dims[size]
+        blocks = [Conv2dBlock(in_dim, dims[size], 1, 1)]
+        log_size = int(math.log(size, 2))
 
         for i in range(log_size, 4, -1):
             out_dim = dims[2 ** (i - 1)]
@@ -266,7 +265,7 @@ class ResBlock(nn.Module):
         model += [Conv2dBlock(out_dim, out_dim, 3, 1, 1, norm=norm, activation='none', pad_type=pad_type)]
 
         if self.downsample:
-            self.residual = Conv2dBlock(in_dim, out_dim, 4, 2, 1, norm=norm, activation=activ, pad_type=pad_type)
+            self.residual = Conv2dBlock(in_dim, out_dim, 4, 2, 1, norm=norm, activation=activation, pad_type=pad_type)
             model += [nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)]
 
         self.model = nn.Sequential(*model)
@@ -332,7 +331,7 @@ class StyleEncoder(nn.Module):
 
         self.adain_param_num = 2 * style_dim   # (gamma,beta;2) * (IL+LN;2) * (dims)  2 x 32 = 64
 #         self.adain_param_num = 2 * style_dim * 2  # (gamma,beta;2) * (IL+LN;2) * (dims)  2 x 2 x 8 = 32
-        self.mlp = MLP(style_dim, self.adain_param_num, mlp_dim, 3, norm='none', activ=activ)
+        self.mlp = MLP(style_dim, self.adain_param_num, 256, 3, norm='none', activ=activ)
 
     def forward(self, x):
         style_code = self.model(x)
@@ -431,7 +430,7 @@ class FST_block(nn.Module):
 
 # From MUNIT
 class Decoder(nn.Module):
-    def __init__(self, n_upsample, n_res, dim, output_dim, input_dim=256, num_ASC_layers=4, num_FST_blocks=2, activ='relu', pad_type='zero'):
+    def __init__(self, n_upsample, dim, output_dim, input_dim=256, num_ASC_layers=4, num_FST_blocks=2, activ='relu', pad_type='zero'):
         super(Decoder, self).__init__()
         self.model = []
         
@@ -454,4 +453,3 @@ class Decoder(nn.Module):
 #             print('block_output', x.size())
         x = self.conv(x)
         return x
-
